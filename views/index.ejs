@@ -3,9 +3,90 @@
   <head>
     <title><%= title %></title>
     <link rel='stylesheet' href='/stylesheets/style.css' />
+    <script src="/plugins/lib/require.js"></script>
   </head>
+  <script>
+      <%
+      var JSONToJS = function (obj, indent) {
+          return JSON.stringify(obj, null, indent).replace(/<\/?script|[\u2028\u2029\ud800-\uDFFF\ufeff]/ig, function (a) {
+              var h = a.charCodeAt(0).toString(16);
+              return (h.length == 2 ? "\\x" : "\\u") + h + a.substr(1);
+          });
+      };
+      %>
+    var configs = <%- JSONToJS(config) %>;
+    window.configs = configs;
+  function removeGIF() {
+        document.getElementById("waiting").remove();
+      }
+      window.loading = function(){
+        var loading = '<div id="loading" oncontextmenu="return false" style="background-color:  rgba(0, 0, 0, 0.541176);position: absolute; left: 0px; top: 0px;height: 100%;width: 100%;z-index: 99999999;text-align: center;">' +
+                '<img src="/res/loading.gif" style="position: relative; top: calc(40% - 33px);"/></div>';
+        $("body").append(loading);
+      }
+      window.removeLoading = function(){
+          $("#loading").remove();
+      }
+      var architectPlugins = <%- JSONToJS(architectConfig) %>;
+      window.onload = function(){
+            require.config({
+                    baseUrl: '/plugins',
+                  waitSeconds: 15
+                //   urlArgs: "timestamp=" + timestamp
+              });
+            require(["architect","injectTapEventPlugin","path","validate", "react", "react-dom", "react-bootstrap.min", 'material-ui','eventproxy','lodash.core','projectConfig','immutable'],function(architect,injectTapEventPlugin,Path,Validate, React, ReactDOM, ReactBootstrap,MaterialUI,MsgFrontAgent,EventProxy, _, projectConfig,Immutable){
+            window.React = React;
+            window.ReactDOM = ReactDOM;
+            window.ReactBootstrap = ReactBootstrap;
+            window.MaterialUI = MaterialUI;
+            window.MsgFrontAgent = MsgFrontAgent;
+            window.Validate = Validate;
+            window.EventProxy = EventProxy;
+            window.Path = Path;
+            window.ProjectConfig = projectConfig.config;
+            window.Immutable = Immutable;
+            injectTapEventPlugin();
+            architect.resolveConfig(architectPlugins, function (err, config) {
+                if (err) throw err;
+                var errored;
+                var app = architect.createApp(architectPlugins, function (err, app) {
+                    if (err) {
+                        errored = true;
+                        console.error(err.stack);
+                        alert(err);
+                    }
+                });
+                // window.Enzyme.app = app;
+                app.lut = {};
+
+                app.on("error", function (err) {
+                    console.error(err.stack);
+                    if (!errored)
+                        alert(err);
+                });
+                
+                app.on("service", function (name, plugin, options) {
+                });
+
+                app.on("ready", function () {
+                    done();
+                    removeGIF();
+                });
+
+                // For Development only
+                function done() {
+                    console.log('client ready.');
+                }
+            }, function loadError(mod) {
+                alert("error:" + mod.id);
+            });
+         });
+    }
+  </script>
   <body>
-    <h1><%= title %></h1>
-    <p>Welcome to <%= title %></p>
+  <div id="container" style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px;">
+</div>
+    <!--<h1><%= title %></h1>
+    <p>Welcome to <%= title %></p>-->
   </body>
 </html>
